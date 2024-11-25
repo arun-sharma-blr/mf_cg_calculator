@@ -34,7 +34,7 @@ def display_summary(df, redemption_type):
 
     # Rename columns for better readability
     df.rename(columns={
-        'Date of Purchase': 'Date',
+        'Date of Purchase': 'SIP Date',
         'Units Purchased': 'Units',
         'NAV at Purchase': 'NAV (Purchase)',
         'Grandfathered NAV': 'Grandfathered NAV',

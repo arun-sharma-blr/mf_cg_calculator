@@ -6,7 +6,7 @@ from utils.calculations import calculate_capital_gains
 from utils.fifo import calculate_fifo_redemption
 import requests
 
-st.set_page_config(page_title="Mutual Fund Capital Gains Calculator", layout="wide")
+st.set_page_config(page_title="Capital Gains Calculator for Equity Mutual Fund SIP", layout="wide")
 
 # Sidebar content
 with st.sidebar:
@@ -15,16 +15,16 @@ with st.sidebar:
     ltcg_rate = st.number_input("Long-Term Capital Gains Tax Rate (%)", min_value=0.0, value=12.5, step=0.1)
     holding_period_months = st.number_input("Holding Period (months)", min_value=1, value=12, step=1)
     ltcg_threshold = st.number_input("LTCG Threshold (₹)", min_value=0, value=125000, step=1000)
-    grandfather_date = st.date_input("Grandfathering Date:", value=pd.to_datetime("2018-01-31"))
+    grandfather_date = st.date_input("Grandfathering Date (yyyy/mm/dd)", value=pd.to_datetime("2018-01-31"))
 
 # Title in the main window
-st.title("Mutual Fund Capital Gains Calculator")
+st.title("Capital Gains Calculator - Equity Mutual Fund SIP")
 
 # URL Inputs in the Main Window
-st.subheader("Enter Mutual Fund NAV URLs")
-st.markdown("Get your MF URLs at [https://www.mfapi.in/](https://www.mfapi.in/)")
-historical_nav_url = st.text_input("Enter Historical NAV URL:")
-latest_nav_url = st.text_input("Enter Latest NAV URL:")
+st.subheader("Enter Mutual Fund NAV URLs - Get them at [https://www.mfapi.in/](https://www.mfapi.in/)")
+#st.markdown("Get your MF URLs at [https://www.mfapi.in/](https://www.mfapi.in/)")
+historical_nav_url = st.text_input("Enter Historical NAV URL")
+latest_nav_url = st.text_input("Enter Latest NAV URL")
 
 # Input SIP details in the main window
 if historical_nav_url and latest_nav_url:
@@ -47,9 +47,15 @@ if historical_nav_url and latest_nav_url:
     with col6:
         sip_amount = st.number_input("SIP Amount (₹)", min_value=1, value=1000)
 
-    st.subheader("Redemption Options")
-    redemption_option = st.radio("Select Redemption Option:", ["Full Redemption", "Partial Redemption"])
-    partial_redeem_amount = st.number_input("Amount to Redeem (₹):", min_value=1) if redemption_option == "Partial Redemption" else None
+    st.subheader("Select Redemption Option")
+    #redemption_option = st.radio("Select Redemption Option:", ["Full Redemption", "Partial Redemption"])
+    #redemption_option = st.radio("",["Full Redemption", "Partial Redemption"])
+    redemption_option = st.radio(
+    label="",  # Empty label
+    options=["Full Redemption", "Partial Redemption"],
+    label_visibility="collapsed"  # Hides the label
+    )
+    partial_redeem_amount = st.number_input("Amount to Redeem (₹)", min_value=1) if redemption_option == "Partial Redemption" else None
 
     if st.button("Calculate Gains"):
         historical_nav_df = fetch_nav_data(historical_nav_url)
@@ -128,17 +134,21 @@ if historical_nav_url and latest_nav_url:
 
                 # Redemption Handling
                 if redemption_option == "Partial Redemption":
-                    redeemed_df = calculate_fifo_redemption(
-                        investments_df,
-                        partial_redeem_amount,
-                        latest_nav,
-                        grandfather_date,
-                        stcg_rate,
-                        ltcg_rate,
-                        holding_period_months,
-                        ltcg_threshold
-                    )
-                    detailed_df = redeemed_df
+                    if partial_redeem_amount > total_holding_value:
+                        st.error(f"The amount entered ({partial_redeem_amount:.2f}) exceeds the total holdings ({total_holding_value:.2f}). Please enter a valid amount.")
+                        st.stop()
+                    else:
+                        redeemed_df = calculate_fifo_redemption(
+                            investments_df,
+                            partial_redeem_amount,
+                            latest_nav,
+                            grandfather_date,
+                            stcg_rate,
+                            ltcg_rate,
+                            holding_period_months,
+                            ltcg_threshold
+                        )
+                        detailed_df = redeemed_df
                 else:
                     detailed_df = investments_df
 
@@ -158,15 +168,17 @@ if historical_nav_url and latest_nav_url:
                 st.write(f"**Total Holding Value**: ₹{total_holding_value:.2f}")
                 if redemption_option == "Partial Redemption":
                     redeemed_units = partial_redeem_amount / latest_nav
-                    st.write(f"**Redeemed Amount**: ₹{partial_redeem_amount:.2f}")
-                    st.write(f"**Redeemed Units**: {redeemed_units:.2f}")
+                    st.write(f"**Redemption Amount**: ₹{partial_redeem_amount:.2f}")
+                    st.write(f"**Redemption Units**: {redeemed_units:.2f}")
                 st.write(f"**Long Term Capital Gains**: ₹{long_term_gains:.2f}")
-                st.write(f"**Taxable LTCG**: ₹{taxable_ltcg:.2f}")
+                st.write(f"**Taxable LTCG (above threshold)**: ₹{taxable_ltcg:.2f}")
                 st.write(f"**Short Term Capital Gains**: ₹{short_term_gains:.2f}")
                 st.write(f"**LTCG Tax**: ₹{ltcg_tax:.2f}")
                 st.write(f"**STCG Tax**: ₹{stcg_tax:.2f}")
                 st.write(f"**Total Tax**: ₹{total_tax:.2f}")
 
+                # Round all numeric columns
+                detailed_df = detailed_df.round(2)
                 # Display Detailed Table
                 #st.subheader("Detailed Capital Gains Table")
                 display_summary(detailed_df, redemption_option)

@@ -15,7 +15,11 @@ with st.sidebar:
     ltcg_rate = st.number_input("Long-Term Capital Gains Tax Rate (%)", min_value=0.0, value=12.5, step=0.1)
     holding_period_months = st.number_input("Holding Period (months)", min_value=1, value=12, step=1)
     ltcg_threshold = st.number_input("LTCG Threshold (₹)", min_value=0, value=125000, step=1000)
-    grandfather_date = st.date_input("Grandfathering Date (yyyy/mm/dd)", value=pd.to_datetime("2018-01-31"))
+    #grandfather_date = st.date_input("Grandfathering Date (yyyy/mm/dd)", value=pd.to_datetime("2018-01-31"))
+    grandfather_date = pd.to_datetime(
+    st.date_input("Grandfathering Date (yyyy/mm/dd)", value=pd.to_datetime("2018-01-31")),
+    dayfirst=True
+    )
 
 # Title in the main window
 st.title("Capital Gains Calculator - Equity Mutual Fund SIP")
@@ -64,7 +68,7 @@ if historical_nav_url and latest_nav_url:
         if historical_nav_df is None or latest_nav_df is None:
             st.error("Failed to fetch NAV data. Please check the URLs.")
         else:
-            historical_nav_df['date'] = pd.to_datetime(historical_nav_df['date'], format='%d-%m-%Y', errors='coerce')
+            historical_nav_df['date'] = pd.to_datetime(historical_nav_df['date'], format='%d-%m-%Y', errors='coerce', dayfirst=True)
             historical_nav_df = historical_nav_df.sort_values(by='date')
 
             latest_nav = float(latest_nav_df.iloc[0]['nav'])
@@ -108,6 +112,13 @@ if historical_nav_url and latest_nav_url:
                     if not grandfathered_nav_df.empty:
                         grandfathered_nav = float(grandfathered_nav_df['nav'].iloc[0])
                         cost_nav = grandfathered_nav
+
+                # Debugging information to verify the logic
+                #st.write(f"Transaction Date: {transaction_date}")
+                #st.write(f"Grandfathering Date: {grandfather_date}")
+                #st.write(f"Grandfathered NAV DataFrame: {grandfathered_nav_df}")
+                #st.write(f"Grandfathered NAV: {grandfathered_nav}")
+                #st.write(f"Cost NAV: {cost_nav}")
 
                 investments.append({
                     'Date of Purchase': transaction_date,
